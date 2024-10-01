@@ -33,6 +33,7 @@ function mousePressed() {
 function setup() {
   createCanvas(windowWidth, windowHeight);
   background(0);
+  textFont("Courier New");
 }
 
 function draw() {
@@ -50,7 +51,7 @@ function draw() {
   }
 
   // Add new circle based on mouse position
-  if (mouseIsPressed && circles.length < maxCircles) {
+  if (mouseIsPressed && circles.length < maxCircles && dist(mouseX, mouseY, pmouseX, pmouseY) > 10) {
     circles.push({
       x: mouseX,
       y: mouseY,
