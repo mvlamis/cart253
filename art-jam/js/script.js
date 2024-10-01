@@ -10,8 +10,10 @@
 let circles = [];
 const maxCircles = 100;
 
-let colourScheme = "green"
-let dotColour
+let colourScheme = "green";
+let dotColour;
+
+let img;
 
 const connections = true;
 const glow = true;
@@ -76,6 +78,16 @@ function draw() {
       line(circle.x, circle.y, prevCircle.x, prevCircle.y);
     }
 
+    // Draw bezier connections
+    if (i > 1 && connections) {
+      let prevCircle = circles[i - 1];
+      let prevPrevCircle = circles[i - 2];
+      stroke(255, 255, 255, random(0, 30));
+      strokeWeight(random(1, 10));
+      noFill();
+      bezier(circle.x, circle.y, prevCircle.x + random(-10, 10), prevCircle.y, prevPrevCircle.x, prevPrevCircle.y, prevPrevCircle.x, prevPrevCircle.y);
+    }
+
     // Draw circle glow
     if (glow) {
       noFill();
@@ -95,42 +107,42 @@ function draw() {
         circles.splice(i, 1);
       }
     }
-
-    // draw circle count
-    if (circleCount) {
-      fill(0);
-      stroke(0);
-      textSize(50);
-      rect(0, 0, 100, 55);
-      if (circles.length == maxCircles) {
-        fill(circle.color);
-      } else {
-        fill(255);
-      }
-      text(circles.length, 10, 50);
-    }
-
-    // draw active colour scheme indicator
-    fill(255);
-    noStroke();
-    if (colourScheme == "red") {
-      ellipse(30, 100, 45);
-    }
-    if (colourScheme == "green") {
-      ellipse(30, 150, 45);
-    }
-    if (colourScheme == "blue") {
-      ellipse(30, 200, 45);
-    }
-
-    // draw colour change buttons
-    push();
-    fill(255, 0, 0);
-    ellipse(30, 100, 35);
-    fill(0, 255, 0);
-    ellipse(30, 150, 35);
-    fill(0, 0, 255);
-    ellipse(30, 200, 35);
-    pop();
   }
+
+  // draw circle count
+  if (circleCount) {
+    fill(0);
+    stroke(0);
+    textSize(50);
+    rect(0, 0, 100, 55);
+    if (circles.length == maxCircles) {
+      fill(circle.color);
+    } else {
+      fill(255);
+    }
+    text(circles.length, 10, 50);
+  }
+
+  // draw active colour scheme indicator
+  fill(255);
+  noStroke();
+  if (colourScheme == "red") {
+    ellipse(30, 100, 45);
+  }
+  if (colourScheme == "green") {
+    ellipse(30, 150, 45);
+  }
+  if (colourScheme == "blue") {
+    ellipse(30, 200, 45);
+  }
+
+  // draw colour change buttons
+  push();
+  fill(255, 0, 0);
+  ellipse(30, 100, 35);
+  fill(0, 255, 0);
+  ellipse(30, 150, 35);
+  fill(0, 0, 255);
+  ellipse(30, 200, 35);
+  pop();
 }
