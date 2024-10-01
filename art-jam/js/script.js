@@ -12,8 +12,7 @@ const maxCircles = 100;
 
 let colourScheme = "green";
 let dotColour;
-
-let img;
+let bgGlow = 0;
 
 const connections = true;
 const glow = true;
@@ -32,6 +31,11 @@ function mousePressed() {
     colourScheme = "blue";
   }
 }
+
+function mouseReleased() {
+  bgGlow = 0;
+}
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
   background(0);
@@ -40,6 +44,28 @@ function setup() {
 
 function draw() {
   background(0, 10);
+
+  // Draw background glow
+  if (mouseIsPressed) {
+    if (bgGlow < 5) {
+      bgGlow += 0.025;
+    } else {
+      bgGlow = 5;
+    }
+  }
+  if (colourScheme == "red") {
+    fill(255, 0, 0, 1);
+  }
+  if (colourScheme == "green") {
+    fill(0, 255, 0, 1);
+  }
+  if (colourScheme == "blue") {
+    fill(0, 0, 255, 1);
+  }
+
+  for (let i = 0; i < 100; i++) {
+    ellipse(windowWidth/2, windowHeight/2, i * bgGlow);
+  }
 
   // Set colour scheme
   if (colourScheme == "red") {
@@ -84,7 +110,7 @@ function draw() {
       let prevPrevCircle = circles[i - 2];
       stroke(255, 255, 255, random(0, 30));
       strokeWeight(random(1, 10));
-      noFill();
+      noFill()
       bezier(circle.x, circle.y, prevCircle.x + random(-10, 10), prevCircle.y, prevPrevCircle.x, prevPrevCircle.y, prevPrevCircle.x, prevPrevCircle.y);
     }
 
@@ -115,11 +141,7 @@ function draw() {
     stroke(0);
     textSize(50);
     rect(0, 0, 100, 55);
-    if (circles.length == maxCircles) {
-      fill(circle.color);
-    } else {
-      fill(255);
-    }
+    fill(255);
     text(circles.length, 10, 50);
   }
 
