@@ -10,11 +10,26 @@
 let circles = [];
 const maxCircles = 100;
 
+let colourScheme = "green"
+let dotColour
+
 const connections = true;
 const glow = true;
 const circlesFade = true;
 const circleCount = true;
 
+// colour change buttons
+function mousePressed() {
+  if (dist(mouseX, mouseY, 30, 100) < 25) {
+    colourScheme = "red";
+  }
+  if (dist(mouseX, mouseY, 30, 150) < 25) {
+    colourScheme = "green";
+  }
+  if (dist(mouseX, mouseY, 30, 200) < 25) {
+    colourScheme = "blue";
+  }
+}
 function setup() {
   createCanvas(windowWidth, windowHeight);
   background(0);
@@ -22,14 +37,25 @@ function setup() {
 
 function draw() {
   background(0, 10);
-  
+
+  // Set colour scheme
+  if (colourScheme == "red") {
+    dotColour = color(random(255), 0, 0, 150);
+  }
+  if (colourScheme == "green") {
+    dotColour = color(0, random(255), 0, 150);
+  }
+  if (colourScheme == "blue") {
+    dotColour = color(0, 0, random(255), 150);
+  }
+
   // Add new circle based on mouse position
   if (mouseIsPressed && circles.length < maxCircles) {
     circles.push({
       x: mouseX,
       y: mouseY,
       size: random(10, 50),
-      color: color(random(255), 255, random(255), 150)
+      color: dotColour
     });
   }
   
@@ -74,7 +100,7 @@ function draw() {
       fill(0);
       stroke(0);
       textSize(50);
-      rect(0, 0, 100, 100);
+      rect(0, 0, 100, 55);
       if (circles.length == maxCircles) {
         fill(circle.color);
       } else {
@@ -82,5 +108,28 @@ function draw() {
       }
       text(circles.length, 10, 50);
     }
+
+    // draw active colour scheme indicator
+    fill(255);
+    noStroke();
+    if (colourScheme == "red") {
+      ellipse(30, 100, 45);
+    }
+    if (colourScheme == "green") {
+      ellipse(30, 150, 45);
+    }
+    if (colourScheme == "blue") {
+      ellipse(30, 200, 45);
+    }
+
+    // draw colour change buttons
+    push();
+    fill(255, 0, 0);
+    ellipse(30, 100, 35);
+    fill(0, 255, 0);
+    ellipse(30, 150, 35);
+    fill(0, 0, 255);
+    ellipse(30, 200, 35);
+    pop();
   }
 }
