@@ -1,6 +1,7 @@
 /**
  * Frogfrogfrog
  * Pippin Barr
+ * With yassifications by Michael Vlamis
  * 
  * A game of catching flies with your frog-tongue
  * 
@@ -11,7 +12,30 @@
  * 
  * Made with p5
  * https://p5js.org/
- */
+ * 
+ * New features:
+ * - Score counter
+ *  - When a fly is caught, the score increases by 1
+ *  - Percentage of flies caught
+ * - Title screen
+ * - Clouds
+ * - Visual improvements
+ *  - Background gradient
+ *  - Frog eyes
+ * 
+ * To do:
+ * - Add hunger system and meter
+ * - Add game over screen
+ * - Add sound effects
+ * - Add music
+ * - Add story text in the title screen
+ * - Add instructions in the title screen
+ * 
+ * To do (advanced):
+ * - Add different types of flies
+ * - Add power-ups
+ * - Add obstacles
+*/
 
 "use strict";
 
@@ -34,6 +58,13 @@ const frog = {
     }
 };
 
+let state = "title";
+
+let score = 0;
+let flyCount = -1;
+
+let clouds = [];
+
 // Our fly
 // Has a position, size, and speed of horizontal movement
 const fly = {
@@ -54,12 +85,37 @@ function setup() {
 }
 
 function draw() {
-    background("#87ceeb");
+    if (state === "title") {
+        title();
+    }
+    else if (state === "game") {
+        game();
+    }
+}
+
+function title() {
+    push();
+    fill("#000000");
+    textAlign(CENTER);
+    textSize(40);
+    text("Félipé the Famished Frog", 320, 240);
+    textSize(20);
+    text("Click to start", 320, 280);
+    pop();
+}
+
+function game() {
+    backgroundGradient();
+    drawClouds();
+    if (random(1) < 0.005) {
+        createCloud();
+    }
     moveFly();
     drawFly();
     moveFrog();
     moveTongue();
     drawFrog();
+    drawScore();
     checkTongueFlyOverlap();
 }
 
@@ -92,7 +148,8 @@ function drawFly() {
  */
 function resetFly() {
     fly.x = 0;
-    fly.y = random(0, 300);
+    fly.y = random(60, 300);
+    flyCount++;
 }
 
 /**
@@ -116,7 +173,7 @@ function moveTongue() {
     else if (frog.tongue.state === "outbound") {
         frog.tongue.y += -frog.tongue.speed;
         // The tongue bounces back if it hits the top
-        if (frog.tongue.y <= 0) {
+        if (frog.tongue.y <= 55) {
             frog.tongue.state = "inbound";
         }
     }
@@ -150,9 +207,74 @@ function drawFrog() {
 
     // Draw the frog's body
     push();
-    fill("#00ff00");
+    fill("#A9E055");
     noStroke();
     ellipse(frog.body.x, frog.body.y, frog.body.size);
+    pop();
+
+    // Draw the frog's eyes
+    push();
+    noStroke();
+    fill("#f2672c");
+    ellipse(frog.body.x - 30, frog.body.y - 50, 15);
+    ellipse(frog.body.x + 30, frog.body.y - 50, 15);
+    fill("#000000");
+    ellipse(frog.body.x - 30, frog.body.y - 50, 4, 10);
+    ellipse(frog.body.x + 30, frog.body.y - 50, 4, 10);
+    pop();
+
+}
+
+function drawScore() {
+    push();
+    fill("#EEEEEE");
+    rect(0, 0, width, 50);
+    fill("#000000");
+    textSize(40);
+    text(score + "/" + flyCount, 10, 40);
+    textAlign(RIGHT);
+    text(`${(score/flyCount*100).toFixed(0)}%`, 630, 40);
+    pop();
+}
+
+function drawClouds() {
+    for (let cloud of clouds) {
+        cloud.x += cloud.speed;
+        if (cloud.x > width + cloud.size) { 
+            // Remove the cloud
+            clouds = clouds.filter(c => c !== cloud);
+        }
+        push();
+        fill("#FFFFFF");
+        noStroke();
+        ellipse(cloud.x, cloud.y, cloud.size);
+        ellipse(cloud.x + cloud.size/2, cloud.y, cloud.size/2);
+        pop();
+    }
+}
+
+function createCloud() {
+    const cloud = {
+        x: -100,
+        y: random(100, 300),
+        size: random(50, 100),
+        speed: random(0.1, 1)
+    };
+    clouds.push(cloud);
+}
+
+function backgroundGradient() { // shamelessly stolen from https://editor.p5js.org/REAS/sketches/S1TNUPzim
+    push();
+    // Define colors
+    let color1 = color(3, 169, 252);
+    let color2 = color(108, 149, 189);
+    // Draw the gradient
+    for (let i = 0; i < height; i++) {
+        let inter = map(i, 0, height, 0, 1);
+        let c = lerpColor(color1, color2, inter);
+        stroke(c);
+        line(0, i, width, i);
+    }
     pop();
 }
 
@@ -169,6 +291,8 @@ function checkTongueFlyOverlap() {
         resetFly();
         // Bring back the tongue
         frog.tongue.state = "inbound";
+        // Increase the score
+        score++;
     }
 }
 
@@ -176,7 +300,12 @@ function checkTongueFlyOverlap() {
  * Launch the tongue on click (if it's not launched yet)
  */
 function mousePressed() {
-    if (frog.tongue.state === "idle") {
-        frog.tongue.state = "outbound";
+    if (state === "title") {
+        state = "game";
+    }
+    else if (state === "game") {
+        if (frog.tongue.state === "idle") {
+            frog.tongue.state = "outbound";
+        }
     }
 }
