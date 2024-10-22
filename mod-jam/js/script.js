@@ -22,9 +22,10 @@
  * - Hunger system
  * - Game over screen
  * - Different types of flies
+ * - Timer
+ * - Best time
  * 
  * To do:
- * - Add timer
  * - Add sound effects
  * - Add music
  * - Add story text in the title screen
@@ -44,6 +45,9 @@ let hungerLossRate = 0.1;
 let state = "title";
 let flyCount = -1;
 let clouds = [];
+let startTime;
+let elapsedTime = 0;
+let bestTime = 0;
 
 // Our frog
 const frog = {
@@ -124,16 +128,22 @@ function game() {
     decreaseHunger();
     checkGameOver();
     drawHungerLossIndicator();
+    updateTimer();
+    drawTimer();
 }
 
 function gameOver() {
     push();
+    fill("#FFFFFF");
+    rect(0, 0, width, height);
     fill("#000000");
     textAlign(CENTER);
     textSize(40);
     text("Game Over", 320, 240);
     textSize(20);
-    text("Click to restart", 320, 280);
+    text(`Final Time: ${(elapsedTime / 1000).toFixed(1)}s`, 320, 280);
+    text(`Best Time: ${(bestTime / 1000).toFixed(1)}s`, 320, 310);
+    text("Click to restart", 320, 340);
     pop();
 }
 
@@ -372,6 +382,9 @@ function decreaseHunger() {
 function checkGameOver() {
     if (hunger <= 0) {
         state = "gameOver";
+        if (elapsedTime > bestTime) {
+            bestTime = elapsedTime;
+        }
     }
 }
 
@@ -381,6 +394,7 @@ function checkGameOver() {
 function mousePressed() {
     if (state === "title") {
         state = "game";
+        startTime = millis();
     }
     else if (state === "game") {
         if (frog.tongue.state === "idle") {
@@ -401,6 +415,8 @@ function resetGame() {
     flyCount = -1;
     resetFly();
     state = "game";
+    startTime = millis();
+    elapsedTime = 0;
 }
 
 /**
@@ -415,4 +431,23 @@ function drawHungerLossIndicator() {
         rect(0, 0, width, height);
         pop();
     }
+}
+
+/**
+ * Updates the timer
+ */
+function updateTimer() {
+    elapsedTime = millis() - startTime;
+}
+
+/**
+ * Draws the timer
+ */
+function drawTimer() {
+    push();
+    fill("#000000");
+    textSize(20);
+    textAlign(LEFT);
+    text(`Time: ${(elapsedTime / 1000).toFixed(1)}s`, 10, 70);
+    pop();
 }
