@@ -21,9 +21,10 @@
  *  - Frog eyes
  * - Hunger system
  * - Game over screen
+ * - Different types of flies
  * 
  * To do:
- * - Add fly types
+ * - Add timer
  * - Add sound effects
  * - Add music
  * - Add story text in the title screen
@@ -39,6 +40,7 @@
 
 const MAX_HUNGER = 100;
 let hunger = MAX_HUNGER;
+let hungerLossRate = 0.1;
 let state = "title";
 let flyCount = -1;
 let clouds = [];
@@ -63,12 +65,14 @@ const frog = {
 };
 
 // Our fly
-// Has a position, size, and speed of horizontal movement
+// Has a position, size, speed of horizontal movement, and type
 const fly = {
     x: 0,
     y: 200, // Will be random
     size: 10,
-    speed: 3
+    speed: 3,
+    type: "regular", // Can be: regular, hungryFly, fastFly, badFly
+    color: "#000000" // Default color
 };
 
 /**
@@ -119,6 +123,7 @@ function game() {
     checkTongueFlyOverlap();
     decreaseHunger();
     checkGameOver();
+    drawHungerLossIndicator();
 }
 
 function gameOver() {
@@ -146,12 +151,12 @@ function moveFly() {
 }
 
 /**
- * Draws the fly as a black circle
+ * Draws the fly as a circle with its assigned color
  */
 function drawFly() {
     push();
     noStroke();
-    fill("#000000");
+    fill(fly.color);
     ellipse(fly.x, fly.y, fly.size);
     pop();
 }
@@ -163,6 +168,21 @@ function resetFly() {
     fly.x = 0;
     fly.y = random(60, 300);
     flyCount++;
+    
+    // Randomly assign a type to the fly
+    const flyTypes = ["regular", "hungryFly", "fastFly", "badFly"];
+    fly.type = random(flyTypes);
+
+    // Assign color based on fly type
+    if (fly.type === "regular") {
+        fly.color = "#000000"; // Black
+    } else if (fly.type === "hungryFly") {
+        fly.color = "#00FF00"; // Green
+    } else if (fly.type === "fastFly") {
+        fly.color = "#0000FF"; // Blue
+    } else if (fly.type === "badFly") {
+        fly.color = "#FF0000"; // Red
+    }
 }
 
 /**
@@ -314,12 +334,28 @@ function checkTongueFlyOverlap() {
     // Check if it's an overlap
     const eaten = (d < frog.tongue.size/2 + fly.size/2);
     if (eaten) {
+        // Apply effects based on fly type
+        if (fly.type === "regular") {
+            hunger = min(hunger + 20, MAX_HUNGER);
+        } else if (fly.type === "hungryFly") {
+            hunger = min(hunger + 40, MAX_HUNGER);
+        } else if (fly.type === "fastFly") {
+            hunger = min(hunger + 20, MAX_HUNGER);
+            // Increase hunger loss rate temporarily
+            console.log("Hunger loss rate increased");
+            setTimeout(() => { 
+                hungerLossRate = 0.1;
+                console.log("Hunger loss rate back to normal");
+            }, 5000); // 5 seconds
+            hungerLossRate = 0.3;
+        } else if (fly.type === "badFly") {
+            hunger = max(hunger - 20, 0);
+        }
+
         // Reset the fly
         resetFly();
         // Bring back the tongue
         frog.tongue.state = "inbound";
-        // Increase the hunger
-        hunger = min(hunger + 20, MAX_HUNGER);
     }
 }
 
@@ -327,7 +363,7 @@ function checkTongueFlyOverlap() {
  * Decreases the hunger level over time
  */
 function decreaseHunger() {
-    hunger -= 0.1;
+    hunger -= hungerLossRate;
 }
 
 /**
@@ -352,9 +388,31 @@ function mousePressed() {
         }
     }
     else if (state === "gameOver") {
-        // Reset the game
-        hunger = MAX_HUNGER;
-        flyCount = -1;
-        state = "title";
+        // Reset the game and start directly
+        resetGame();
+    }
+}
+
+/**
+ * Resets the game state
+ */
+function resetGame() {
+    hunger = MAX_HUNGER;
+    flyCount = -1;
+    resetFly();
+    state = "game";
+}
+
+/**
+ * Draws a visual indicator when the hunger loss rate is increased
+ */
+function drawHungerLossIndicator() {
+    if (hungerLossRate > 0.1) {
+        push();
+        stroke("#FF0000");
+        strokeWeight(10);
+        noFill();
+        rect(0, 0, width, height);
+        pop();
     }
 }
