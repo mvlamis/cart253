@@ -14,18 +14,16 @@
  * https://p5js.org/
  * 
  * New features:
- * - Score counter
- *  - When a fly is caught, the score increases by 1
- *  - Percentage of flies caught
  * - Title screen
  * - Clouds
  * - Visual improvements
  *  - Background gradient
  *  - Frog eyes
+ * - Hunger system
+ * - Game over screen
  * 
  * To do:
- * - Add hunger system and meter
- * - Add game over screen
+ * - Add fly types
  * - Add sound effects
  * - Add music
  * - Add story text in the title screen
@@ -38,6 +36,12 @@
 */
 
 "use strict";
+
+const MAX_HUNGER = 100;
+let hunger = MAX_HUNGER;
+let state = "title";
+let flyCount = -1;
+let clouds = [];
 
 // Our frog
 const frog = {
@@ -57,13 +61,6 @@ const frog = {
         state: "idle" // State can be: idle, outbound, inbound
     }
 };
-
-let state = "title";
-
-let score = 0;
-let flyCount = -1;
-
-let clouds = [];
 
 // Our fly
 // Has a position, size, and speed of horizontal movement
@@ -91,6 +88,9 @@ function draw() {
     else if (state === "game") {
         game();
     }
+    else if (state === "gameOver") {
+        gameOver();
+    }
 }
 
 function title() {
@@ -115,8 +115,21 @@ function game() {
     moveFrog();
     moveTongue();
     drawFrog();
-    drawScore();
+    drawHunger();
     checkTongueFlyOverlap();
+    decreaseHunger();
+    checkGameOver();
+}
+
+function gameOver() {
+    push();
+    fill("#000000");
+    textAlign(CENTER);
+    textSize(40);
+    text("Game Over", 320, 240);
+    textSize(20);
+    text("Click to restart", 320, 280);
+    pop();
 }
 
 /**
@@ -222,18 +235,32 @@ function drawFrog() {
     ellipse(frog.body.x - 30, frog.body.y - 50, 4, 10);
     ellipse(frog.body.x + 30, frog.body.y - 50, 4, 10);
     pop();
-
 }
 
-function drawScore() {
+function drawHunger() {
+    const barWidth = 300;
+    const barHeight = 20;
+    const barX = 10;
+    const barY = 10;
+
+    // Draw the background of the hunger bar
     push();
     fill("#EEEEEE");
-    rect(0, 0, width, 50);
-    fill("#000000");
-    textSize(40);
-    text(score + "/" + flyCount, 10, 40);
-    textAlign(RIGHT);
-    text(`${(score/flyCount*100).toFixed(0)}%`, 630, 40);
+    rect(barX, barY, barWidth, barHeight);
+    pop();
+
+    // Draw the current hunger level
+    const currentHungerWidth = map(hunger, 0, MAX_HUNGER, 0, barWidth);
+    push();
+    fill("#FF0000");
+    rect(barX, barY, currentHungerWidth, barHeight);
+    pop();
+
+    // Draw the border of the hunger bar
+    push();
+    noFill();
+    stroke("#000000");
+    rect(barX, barY, barWidth, barHeight);
     pop();
 }
 
@@ -291,8 +318,24 @@ function checkTongueFlyOverlap() {
         resetFly();
         // Bring back the tongue
         frog.tongue.state = "inbound";
-        // Increase the score
-        score++;
+        // Increase the hunger
+        hunger = min(hunger + 20, MAX_HUNGER);
+    }
+}
+
+/**
+ * Decreases the hunger level over time
+ */
+function decreaseHunger() {
+    hunger -= 0.1;
+}
+
+/**
+ * Checks if the game is over
+ */
+function checkGameOver() {
+    if (hunger <= 0) {
+        state = "gameOver";
     }
 }
 
@@ -307,5 +350,11 @@ function mousePressed() {
         if (frog.tongue.state === "idle") {
             frog.tongue.state = "outbound";
         }
+    }
+    else if (state === "gameOver") {
+        // Reset the game
+        hunger = MAX_HUNGER;
+        flyCount = -1;
+        state = "title";
     }
 }
