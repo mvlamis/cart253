@@ -25,6 +25,7 @@
  * - Timer
  * - Best time
  * - Story and instructions
+ * - Multiple flies
  * 
  * To do:
  * - Add sound effects
@@ -38,6 +39,7 @@
 "use strict";
 
 const MAX_HUNGER = 100;
+const MAX_FLIES = 5; // Maximum number of flies on screen
 let hunger = MAX_HUNGER;
 let hungerLossRate = 0.1;
 let state = "title";
@@ -47,45 +49,46 @@ let startTime;
 let elapsedTime = 0;
 let bestTime = 0;
 let titleScreenPart = 1;
+let flies = []; // Array to store multiple flies
 
 // Our frog
 const frog = {
-    // The frog's body has a position and size
     body: {
         x: 320,
         y: 520,
         size: 150
     },
-    // The frog's tongue has a position, size, speed, and state
     tongue: {
         x: undefined,
         y: 480,
         size: 20,
         speed: 20,
-        // Determines how the tongue moves each frame
-        state: "idle" // State can be: idle, outbound, inbound
+        state: "idle"
     }
 };
 
-// Our fly
-// Has a position, size, speed of horizontal movement, and type
-const fly = {
-    x: 0,
-    y: 200, // Will be random
-    size: 10,
-    speed: 3,
-    type: "regular", // Can be: regular, hungryFly, fastFly, badFly
-    color: "#000000" // Default color
-};
+function createFly() {
+    return {
+        x: 0,
+        y: random(60, 300),
+        size: 10,
+        speed: random(1, 5),
+        type: random(["regular", "hungryFly", "fastFly", "badFly"]),
+        getColor() {
+            switch (this.type) {
+                case "regular": return "#000000";
+                case "hungryFly": return "#00FF00";
+                case "fastFly": return "#0000FF";
+                case "badFly": return "#FF0000";
+            }
+        }
+    };
+}
 
-/**
- * Creates the canvas and initializes the fly
- */
 function setup() {
     createCanvas(640, 480);
-
-    // Give the fly its first random position
-    resetFly();
+    // Initialize with a few flies
+    flies.push(createFly());
 }
 
 function draw() {
@@ -134,23 +137,23 @@ function title() {
 
         // Draw colored dots and descriptions
         const descriptions = [
-            { color: "#000000", text: "+20 Hunger" },
-            { color: "#00FF00", text: "+40 Hunger" },
-            { color: "#0000FF", text: "Poisonous" },
-            { color: "#FF0000", text: "-20 Hunger" }
+            { color: "#000000", text: "Diet Coke" },
+            { color: "#00FF00", text: "Ozempic" },
+            { color: "#0000FF", text: "Alcohol" },
+            { color: "#FF0000", text: "Hyperthyroidism" }
         ];
 
-        let x = 40; 
+        let x = 60;
         let y = 340;
 
         descriptions.forEach((desc) => {
             noStroke();
             fill(desc.color);
-            ellipse(x, y - 5, 10, 10); 
+            ellipse(x, y - 5, 10, 10);
             fill("#000000");
             textAlign(LEFT);
             text(desc.text, x + 15, y);
-            x += 150; // Move x position for next description
+            x += 120; // Move x position for next description
         });
 
         textAlign(CENTER);
@@ -165,8 +168,11 @@ function game() {
     if (random(1) < 0.005) {
         createCloud();
     }
-    moveFly();
-    drawFly();
+
+    // Handle flies
+    updateFlies();
+    drawFlies();
+
     moveFrog();
     moveTongue();
     drawFrog();
@@ -194,6 +200,21 @@ function gameOver() {
     pop();
 }
 
+function updateFlies() {
+    // Move existing flies
+    for (let fly of flies) {
+        fly.x += fly.speed;
+    }
+
+    // Remove flies that go off screen
+    flies = flies.filter(fly => fly.x <= width);
+
+    // Add new flies if we're below the maximum
+    if (flies.length < MAX_FLIES && random(1) < 0.02) {
+        flies.push(createFly());
+    }
+}
+
 /**
  * Moves the fly according to its speed
  * Resets the fly if it gets all the way to the right
@@ -216,6 +237,16 @@ function drawFly() {
     fill(fly.color);
     ellipse(fly.x, fly.y, fly.size);
     pop();
+}
+
+function drawFlies() {
+    for (let fly of flies) {
+        push();
+        noStroke();
+        fill(fly.getColor());
+        ellipse(fly.x, fly.y, fly.size);
+        pop();
+    }
 }
 
 /**
@@ -386,33 +417,37 @@ function backgroundGradient() { // shamelessly stolen from https://editor.p5js.o
  * Handles the tongue overlapping the fly
  */
 function checkTongueFlyOverlap() {
-    // Get distance from tongue to fly
-    const d = dist(frog.tongue.x, frog.tongue.y, fly.x, fly.y);
-    // Check if it's an overlap
-    const eaten = (d < frog.tongue.size/2 + fly.size/2);
-    if (eaten) {
-        // Apply effects based on fly type
-        if (fly.type === "regular") {
-            hunger = min(hunger + 20, MAX_HUNGER);
-        } else if (fly.type === "hungryFly") {
-            hunger = min(hunger + 40, MAX_HUNGER);
-        } else if (fly.type === "fastFly") {
-            hunger = min(hunger + 20, MAX_HUNGER);
-            // Increase hunger loss rate temporarily
-            console.log("Hunger loss rate increased");
-            setTimeout(() => { 
-                hungerLossRate = 0.1;
-                console.log("Hunger loss rate back to normal");
-            }, 5000); // 5 seconds
-            hungerLossRate = 0.3;
-        } else if (fly.type === "badFly") {
-            hunger = max(hunger - 20, 0);
-        }
+    for (let i = flies.length - 1; i >= 0; i--) {
+        const fly = flies[i];
+        const d = dist(frog.tongue.x, frog.tongue.y, fly.x, fly.y);
+        const eaten = (d < frog.tongue.size / 2 + fly.size / 2);
 
-        // Reset the fly
-        resetFly();
-        // Bring back the tongue
-        frog.tongue.state = "inbound";
+        if (eaten) {
+            // Apply effects based on fly type
+            switch (fly.type) {
+                case "regular":
+                    hunger = min(hunger + 20, MAX_HUNGER);
+                    break;
+                case "hungryFly":
+                    hunger = min(hunger + 40, MAX_HUNGER);
+                    break;
+                case "fastFly":
+                    hunger = min(hunger + 20, MAX_HUNGER);
+                    hungerLossRate = 0.3;
+                    setTimeout(() => { hungerLossRate = 0.1; }, 5000);
+                    break;
+                case "badFly":
+                    hunger = max(hunger - 20, 0);
+                    break;
+            }
+
+            // Remove the eaten fly
+            flies.splice(i, 1);
+            flyCount++;
+
+            // Bring back the tongue
+            frog.tongue.state = "inbound";
+        }
     }
 }
 
@@ -464,7 +499,8 @@ function mousePressed() {
 function resetGame() {
     hunger = MAX_HUNGER;
     flyCount = -1;
-    resetFly();
+    flies = [];
+    flies.push(createFly());
     state = "game";
     startTime = millis();
     elapsedTime = 0;
