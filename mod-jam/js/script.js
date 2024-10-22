@@ -24,15 +24,13 @@
  * - Different types of flies
  * - Timer
  * - Best time
+ * - Story and instructions
  * 
  * To do:
  * - Add sound effects
  * - Add music
- * - Add story text in the title screen
- * - Add instructions in the title screen
  * 
  * To do (advanced):
- * - Add different types of flies
  * - Add power-ups
  * - Add obstacles
 */
@@ -48,6 +46,7 @@ let clouds = [];
 let startTime;
 let elapsedTime = 0;
 let bestTime = 0;
+let titleScreenPart = 1;
 
 // Our frog
 const frog = {
@@ -106,9 +105,57 @@ function title() {
     fill("#000000");
     textAlign(CENTER);
     textSize(40);
-    text("Félipé the Famished Frog", 320, 240);
-    textSize(20);
-    text("Click to start", 320, 280);
+    if (titleScreenPart === 1) {
+        fill("#FFFFFF");
+        rect(0, 0, width, height);
+        fill("#000000");
+        text("Félipé the Famished Frog", 320, 240);
+        textSize(20);
+        text("Click to continue", 320, 280);
+    } else if (titleScreenPart === 2) {
+        textSize(15);
+        fill("#FFFFFF");
+        rect(0, 0, width, height);
+        fill("#000000");
+        text("Once upon a time, there was a frog named Félipé.", 320, 200);
+        text("Félipé was notoriously greedy among his peers, and would eat whatever he could see.", 320, 230);
+        text("Help Félipé on his weight loss journey by catching flies with his tongue!", 320, 260);
+        textSize(20);
+        text("Click to continue", 320, 300);
+    } else if (titleScreenPart === 3) {
+        textSize(20);
+        fill("#FFFFFF");
+        rect(0, 0, width, height);
+        fill("#000000");
+        text("Instructions:", 320, 200);
+        text("- Move the frog with your mouse", 320, 230);
+        text("- Click to launch the tongue", 320, 260);
+        text("- Catch flies to keep Félipé from starving", 320, 290);
+
+        // Draw colored dots and descriptions
+        const descriptions = [
+            { color: "#000000", text: "+20 Hunger" },
+            { color: "#00FF00", text: "+40 Hunger" },
+            { color: "#0000FF", text: "Poisonous" },
+            { color: "#FF0000", text: "-20 Hunger" }
+        ];
+
+        let x = 40; 
+        let y = 340;
+
+        descriptions.forEach((desc) => {
+            noStroke();
+            fill(desc.color);
+            ellipse(x, y - 5, 10, 10); 
+            fill("#000000");
+            textAlign(LEFT);
+            text(desc.text, x + 15, y);
+            x += 150; // Move x position for next description
+        });
+
+        textAlign(CENTER);
+        text("Click to start", 320, 400);
+    }
     pop();
 }
 
@@ -393,8 +440,12 @@ function checkGameOver() {
  */
 function mousePressed() {
     if (state === "title") {
-        state = "game";
-        startTime = millis();
+        if (titleScreenPart < 3) {
+            titleScreenPart++;
+        } else {
+            state = "game";
+            startTime = millis();
+        }
     }
     else if (state === "game") {
         if (frog.tongue.state === "idle") {
@@ -445,9 +496,9 @@ function updateTimer() {
  */
 function drawTimer() {
     push();
-    fill("#000000");
+    fill("#FFFFFF");
     textSize(20);
-    textAlign(LEFT);
-    text(`Time: ${(elapsedTime / 1000).toFixed(1)}s`, 10, 70);
+    textAlign(RIGHT);
+    text((elapsedTime / 1000).toFixed(1), 630, 30);
     pop();
 }
