@@ -28,10 +28,8 @@
  * - Story and instructions
  * - Multiple flies
  * - Power-ups
- * 
- * To do:
- * - Add sound effects
- * - Add music
+ * - Sound effects
+ * - Music
 */
 
 "use strict";
@@ -51,12 +49,28 @@ let flies = []; // Array to store multiple flies
 let powerUpsOnScreen = [];
 let appliedPowerUps = [];
 let cOffset = 0;
+let sounds = {};
 
 const powerUps = [ // powerups have names because i do not want to code in emojis thank you very much
     ["wokeLeft", "🏳️‍🌈"],
     ["wigglyTongue", "🫨"],
     ["allergicReaction", "👅"]
 ];
+
+function preload() {
+    sounds = {
+        bg: loadSound("/mod-jam/assets/sounds/bg.mp3"),
+        bornthisway: loadSound("/mod-jam/assets/sounds/bornthisway.mp3"),
+        buzz: loadSound("/mod-jam/assets/sounds/buzz.mp3"),
+        eat: loadSound("/mod-jam/assets/sounds/eat.mp3"),
+        mlerm: loadSound("/mod-jam/assets/sounds/mlerm.mp3"),
+        widemlerm: loadSound("/mod-jam/assets/sounds/widemlerm.mp3"),
+        wobblymlerm: loadSound("/mod-jam/assets/sounds/wobblymlerm.mp3"),
+        wompwomp: loadSound("/mod-jam/assets/sounds/wompwomp.mp3")
+    };
+
+    sounds.bg.setLoop(true);
+}
 
 // Our frog
 const frog = {
@@ -203,6 +217,14 @@ function game() {
     checkFrogPowerUpOverlap();
     removeExpiredPowerUps();
     updateDayNightCycle();
+    // loop bg music
+    if (!sounds.bg.isPlaying() && !appliedPowerUps.some(p => p[0] === "wokeLeft") && state === "game") {
+        sounds.bg.play();
+    }
+    // loop fly buzz sound
+    if (!sounds.buzz.isPlaying() && flies.length > 0 && state === "game") {
+        sounds.buzz.play();
+    }
 }
 
 function gameOver() {
@@ -488,6 +510,9 @@ function checkTongueFlyOverlap() {
         const eaten = (d < frog.tongue.size / 2 + fly.size / 2);
 
         if (eaten) {
+            // Play the eat sound
+            sounds.eat.play();
+
             // Apply effects based on fly type
             switch (fly.type) {
                 case "regular":
@@ -529,6 +554,9 @@ function decreaseHunger() {
 function checkGameOver() {
     if (hunger <= 0) {
         state = "gameOver";
+        sounds.bg.stop();
+        sounds.buzz.stop();
+        sounds.wompwomp.play();
         if (elapsedTime > bestTime) {
             bestTime = elapsedTime;
         }
@@ -550,6 +578,14 @@ function mousePressed() {
     else if (state === "game") {
         if (frog.tongue.state === "idle") {
             frog.tongue.state = "outbound";
+            if (appliedPowerUps.some(p => p[0] === "wigglyTongue")) {
+                sounds.wobblymlerm.play();
+            } else if (appliedPowerUps.some(p => p[0] === "allergicReaction")) {
+                sounds.widemlerm.play();
+            } else {
+                sounds.mlerm.play();
+            }
+
         }
     }
     else if (state === "gameOver") {
@@ -633,6 +669,7 @@ function updatePowerUpsOnScreen() {
     for (let powerUp of powerUpsOnScreen) {
         powerUp.y += 1;
     }
+    console.log(powerUpsOnScreen);
 }
 
 function checkFrogPowerUpOverlap() {
@@ -644,6 +681,11 @@ function checkFrogPowerUpOverlap() {
         if (eaten) {
             if (!appliedPowerUps.some(p => p[0] === powerUp.type[0])) {
                 appliedPowerUps.push([powerUp.type[0], powerUp.type[1], millis()]); // Add power-up with timestamp
+                if (powerUp.type[0] === "wokeLeft") {
+                    sounds.bg.stop();
+                    sounds.bornthisway.play();
+                    
+                }
             }
 
             powerUpsOnScreen.splice(i, 1);
