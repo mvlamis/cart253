@@ -1,9 +1,9 @@
-# Frogfrogfrog
+# Félipé the Famished Frog (née Frogfrogfrog)
 
 A game about catching flies.
 
-[Play it!](https://pippinbarr.github.io/cart253-examples/topics/making/frogfrogfrog/index.html)
+## Victims of code theft
 
-- [Ideas](./ideas.md)
-- [Planning](./planning.md)
-- [Pseudocode](./pseudocode.md)
+Thanks to:
+- https://editor.p5js.org/NickParsons/sketches/1xfjY-ZoE for the rainbow effect
+- https://editor.p5js.org/REAS/sketches/S1TNUPzim for the sky gradient

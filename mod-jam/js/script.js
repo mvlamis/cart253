@@ -18,6 +18,7 @@
  * - Clouds
  * - Visual improvements
  *  - Background gradient
+ *  - Day/night cycle
  *  - Frog eyes
  * - Hunger system
  * - Game over screen
@@ -26,14 +27,11 @@
  * - Best time
  * - Story and instructions
  * - Multiple flies
+ * - Power-ups
  * 
  * To do:
  * - Add sound effects
  * - Add music
- * 
- * To do (advanced):
- * - Add power-ups
- * - Add obstacles
 */
 
 "use strict";
@@ -50,6 +48,15 @@ let elapsedTime = 0;
 let bestTime = 0;
 let titleScreenPart = 1;
 let flies = []; // Array to store multiple flies
+let powerUpsOnScreen = [];
+let appliedPowerUps = [];
+let cOffset = 0;
+
+const powerUps = [ // powerups have names because i do not want to code in emojis thank you very much
+    ["wokeLeft", "🏳️‍🌈"],
+    ["wigglyTongue", "🫨"],
+    ["allergicReaction", "👅"]
+];
 
 // Our frog
 const frog = {
@@ -163,10 +170,20 @@ function title() {
 }
 
 function game() {
-    backgroundGradient();
+    if (appliedPowerUps.some(p => p[0] === "wokeLeft")) {
+        drawMovingRainbow();
+    } else {
+        colorMode(RGB);
+        backgroundGradient();
+    }
+    drawPowerUpsOnScreen();
+    drawInfoBar();
     drawClouds();
-    if (random(1) < 0.005) {
+    if (random(1) < 0.005) { 
         createCloud();
+    }
+    if (random(1) < 0.001) {
+        createPowerUp();
     }
 
     // Handle flies
@@ -182,7 +199,10 @@ function game() {
     checkGameOver();
     drawHungerLossIndicator();
     updateTimer();
-    drawTimer();
+    updatePowerUpsOnScreen();
+    checkFrogPowerUpOverlap();
+    removeExpiredPowerUps();
+    updateDayNightCycle();
 }
 
 function gameOver() {
@@ -284,8 +304,13 @@ function moveFrog() {
  * Handles moving the tongue based on its state
  */
 function moveTongue() {
-    // Tongue matches the frog's x
-    frog.tongue.x = frog.body.x;
+    if (!appliedPowerUps.some(p => p[0] === "wigglyTongue")) {
+        // Tongue matches the frog's x
+        frog.tongue.x = frog.body.x;
+    } else { 
+        frog.tongue.x = frog.body.x + 50 * sin(millis() / 100);
+    }
+
     // If the tongue is idle, it doesn't do anything
     if (frog.tongue.state === "idle") {
         // Do nothing
@@ -312,6 +337,11 @@ function moveTongue() {
  * Displays the tongue (tip and line connection) and the frog (body)
  */
 function drawFrog() {
+    if (appliedPowerUps.some(p => p[0] === "allergicReaction")) {
+        frog.tongue.size = 40;
+    } else {
+        frog.tongue.size = 20;
+    }
     // Draw the tongue tip
     push();
     fill("#ff0000");
@@ -349,7 +379,7 @@ function drawHunger() {
     const barWidth = 300;
     const barHeight = 20;
     const barX = 10;
-    const barY = 10;
+    const barY = 15;
 
     // Draw the background of the hunger bar
     push();
@@ -398,12 +428,40 @@ function createCloud() {
     clouds.push(cloud);
 }
 
-function backgroundGradient() { // shamelessly stolen from https://editor.p5js.org/REAS/sketches/S1TNUPzim
+let day = true;
+let transitionStartTime = 0;
+let transitioning = false;
+
+function backgroundGradient() {
     push();
-    // Define colors
-    let color1 = color(3, 169, 252);
-    let color2 = color(108, 149, 189);
-    // Draw the gradient
+    let color1, color2;
+
+    if (transitioning) {
+        let transitionProgress = (millis() - transitionStartTime) / 2000; // 2 seconds transition
+        if (transitionProgress >= 1) {
+            transitioning = false;
+            day = !day;
+        } else {
+            if (day) {
+                color1 = lerpColor(color(3, 169, 252), color(0, 0, 0), transitionProgress);
+                color2 = lerpColor(color(108, 149, 189), color(25, 25, 112), transitionProgress);
+            } else {
+                color1 = lerpColor(color(0, 0, 0), color(3, 169, 252), transitionProgress);
+                color2 = lerpColor(color(25, 25, 112), color(108, 149, 189), transitionProgress);
+            }
+        }
+    }
+
+    if (!transitioning) {
+        if (day) {
+            color1 = color(3, 169, 252);
+            color2 = color(108, 149, 189);
+        } else {
+            color1 = color(0, 0, 0);
+            color2 = color(25, 25, 112);
+        }
+    }
+
     for (let i = 0; i < height; i++) {
         let inter = map(i, 0, height, 0, 1);
         let c = lerpColor(color1, color2, inter);
@@ -411,6 +469,13 @@ function backgroundGradient() { // shamelessly stolen from https://editor.p5js.o
         line(0, i, width, i);
     }
     pop();
+}
+
+function updateDayNightCycle() {
+    if (millis() - transitionStartTime >= 10000) { // 10 seconds for each cycle
+        transitioning = true;
+        transitionStartTime = millis();
+    }
 }
 
 /**
@@ -504,6 +569,9 @@ function resetGame() {
     state = "game";
     startTime = millis();
     elapsedTime = 0;
+    powerUpsOnScreen = [];
+    hungerLossRate = 0.1;
+    appliedPowerUps = [];
 }
 
 /**
@@ -537,4 +605,93 @@ function drawTimer() {
     textAlign(RIGHT);
     text((elapsedTime / 1000).toFixed(1), 630, 30);
     pop();
+}
+
+function createPowerUp() {
+    const powerUp = {
+        x: random(50, width - 50),
+        y: 0,
+        size: 30,
+        type: random(powerUps),
+    };
+    powerUpsOnScreen.push(powerUp);
+}
+
+function drawPowerUpsOnScreen() {
+    for (let powerUp of powerUpsOnScreen) {
+        push();
+        stroke("#000000");
+        fill("#FFFFFF");
+        textAlign(CENTER, CENTER);
+        textSize(powerUp.size);
+        text(powerUp.type[1], powerUp.x, powerUp.y);
+        pop();
+    }
+}
+
+function updatePowerUpsOnScreen() {
+    for (let powerUp of powerUpsOnScreen) {
+        powerUp.y += 1;
+    }
+}
+
+function checkFrogPowerUpOverlap() {
+    for (let i = powerUpsOnScreen.length - 1; i >= 0; i--) {
+        const powerUp = powerUpsOnScreen[i];
+        const d = dist(frog.body.x, frog.body.y, powerUp.x, powerUp.y);
+        const eaten = (d < frog.body.size / 2 + powerUp.size / 2);
+
+        if (eaten) {
+            if (!appliedPowerUps.some(p => p[0] === powerUp.type[0])) {
+                appliedPowerUps.push([powerUp.type[0], powerUp.type[1], millis()]); // Add power-up with timestamp
+            }
+
+            powerUpsOnScreen.splice(i, 1);
+        }
+    }
+}
+
+function drawPowerUpDisplay() {
+    push();
+    fill("#000000");
+    textAlign(CENTER, CENTER);
+    textSize(20);
+    // show power-up emojis in top bar
+    let x = 330;
+    let y = 25;
+    for (let powerUp of appliedPowerUps) {
+        text(powerUp[1], x, y);
+        x += 30;
+    }
+    pop();
+}
+
+function drawInfoBar() {
+    push();
+    fill("#555555");
+    rect(0, 0, width, 50);
+    drawTimer();
+    drawHunger();
+    drawPowerUpDisplay();
+    pop();
+}
+
+function drawMovingRainbow() { // shamefully stolen from https://editor.p5js.org/NickParsons/sketches/1xfjY-ZoE
+    const inc = height / 100;
+    colorMode(HSB);
+
+    for (let y = 0; y < height; y += inc) {
+        let h = (y / height) * 360;
+        fill(abs(h + cOffset) % 360, 100, 100);
+        noStroke();
+        rect(0, y - inc, width, y);
+    }
+
+    cOffset -= 5;
+}
+
+// check and remove expired power-ups
+function removeExpiredPowerUps() {
+    const currentTime = millis();
+    appliedPowerUps = appliedPowerUps.filter(p => currentTime - p[2] < 10000); // 10000 milliseconds = 10 seconds
 }
