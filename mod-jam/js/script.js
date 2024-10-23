@@ -59,14 +59,14 @@ const powerUps = [ // powerups have names because i do not want to code in emoji
 
 function preload() {
     sounds = {
-        bg: loadSound("/mod-jam/assets/sounds/bg.mp3"),
-        bornthisway: loadSound("/mod-jam/assets/sounds/bornthisway.mp3"),
-        buzz: loadSound("/mod-jam/assets/sounds/buzz.mp3"),
-        eat: loadSound("/mod-jam/assets/sounds/eat.mp3"),
-        mlerm: loadSound("/mod-jam/assets/sounds/mlerm.mp3"),
-        widemlerm: loadSound("/mod-jam/assets/sounds/widemlerm.mp3"),
-        wobblymlerm: loadSound("/mod-jam/assets/sounds/wobblymlerm.mp3"),
-        wompwomp: loadSound("/mod-jam/assets/sounds/wompwomp.mp3")
+        bg: loadSound("assets/sounds/bg.mp3"),
+        bornthisway: loadSound("assets/sounds/bornthisway.mp3"),
+        buzz: loadSound("assets/sounds/buzz.mp3"),
+        eat: loadSound("assets/sounds/eat.mp3"),
+        mlerm: loadSound("assets/sounds/mlerm.mp3"),
+        widemlerm: loadSound("assets/sounds/widemlerm.mp3"),
+        wobblymlerm: loadSound("assets/sounds/wobblymlerm.mp3"),
+        wompwomp: loadSound("assets/sounds/wompwomp.mp3")
     };
 
     sounds.bg.setLoop(true);
