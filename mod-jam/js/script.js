@@ -669,7 +669,6 @@ function updatePowerUpsOnScreen() {
     for (let powerUp of powerUpsOnScreen) {
         powerUp.y += 1;
     }
-    console.log(powerUpsOnScreen);
 }
 
 function checkFrogPowerUpOverlap() {
