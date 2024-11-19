@@ -1,7 +1,7 @@
 /**
  * Variation Jam
  * Michaelsoft Wurd
- * Michael VLamis
+ * Michael Vlamis
  * 
  * What if word processors were good?
  * 
@@ -12,10 +12,17 @@
 const templateButtonHeight = 100;
 const templateButtonStartPos = 200;
 
-const templates = {"blank": "Blank Document", "autocorrect": "Autocorrect"};
+const templates = {
+    "blank": "Blank Document", 
+    "autocorrect": "Autocorrect",
+    "musical": "Musical Typing"
+};
+
 const templateDescriptions = {
-    "blank": "Basic, boring, and blank. Are you allergic to fun?", 
-    "autocorrect": "A document with autocorrect enabled"};
+    "blank": "Basic, boring, and blank. Are you allergic to fun?",
+    "autocorrect": "Computers don't make mistakes. It's autocorrect, not autoincorrect.",
+    "musical": "Every keystroke is music to my ears."
+};
 
 let state = "start";
 let font = "sans-serif";
@@ -25,14 +32,35 @@ let words = [];
 let underlinedWordIndex = -1;
 let underlineTimeout;
 
+let keyboardSounds = [];
+const numSounds = 8; // Number of different sounds to cycle through
+
+let currentVolume = 0.1;
+const volumeIncrement = 0.05;
+
 /**
  * OH LOOK I DIDN'T DESCRIBE SETUP!!
 */
 function setup() {
     createCanvas(600, 800);
+    
+    // Load keyboard sounds
+    for (let i = 1; i < numSounds; i++) {
+        keyboardSounds[i] = loadSound(`assets/sounds/key${i}.wav`);
+    }
 }
 
 function keyPressed() {
+    if (state === "musical") {
+        // Play a random sound with increasing volume
+        let randomSound = floor(random(keyboardSounds.length - 1)) + 1;
+        keyboardSounds[randomSound].setVolume(currentVolume);
+        keyboardSounds[randomSound].play();
+        
+        // Increase volume for next keystroke
+        currentVolume = currentVolume + volumeIncrement;
+    }
+
     if (keyCode === BACKSPACE) {
         content = content.slice(0, -1);
     } else if (keyCode === ENTER) {
@@ -140,7 +168,25 @@ function ribbonMenu() {
     text(templates[state], 150, 90);
     // template description text
     textSize(12);
-    text(templateDescriptions[state], 150, 110);
+    if (state !== "start") {
+        let desc = templateDescriptions[state];
+        let x = 150;
+        let y = 110;
+        let width = 450;
+        let lineHeight = 15;
+        let descWords = desc.split(' ');
+        for (let i = 0; i < descWords.length; i++) {
+            let word = descWords[i];
+            text(word, x, y);
+            x += textWidth(word + ' ');
+            // wrap text
+            if (x > width - 40) {
+                x = 150;
+                y += lineHeight;
+            }
+        }
+    }
+    
 
     // font buttons
     push();
@@ -195,7 +241,8 @@ function regularEditor() {
             drawSquigglyUnderline(word, x, y + lineHeight);
         }
         text(word, x, y);
-        x += textWidth(word + ' ');
+        x += textWidth(word + ' '); // get width of word with space
+        // wrap text
         if (x > width - 40) {
             x = 30;
             y += lineHeight;
@@ -231,6 +278,8 @@ function draw() {
     } else if (state === "blank") {
         regularEditor();
     } else if (state === "autocorrect") {
+        regularEditor();
+    } else if (state === "musical") {
         regularEditor();
     }
     navbar();
