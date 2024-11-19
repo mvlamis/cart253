@@ -5,11 +5,14 @@
  * 
  * What if word processors were good?
  * 
+ * 
+ * Help from:
+ * - https://rednoise.org/rita/examples/p5/Kafgenstein/
  */
 
 "use strict";
 
-const templateButtonHeight = 100;
+const templateButtonHeight = 80;
 const templateButtonStartPos = 180;
 
 const templates = {
@@ -17,7 +20,8 @@ const templates = {
     "autocorrect": "Autocorrect",
     "musical": "Musical Typing",
     "alphabetical": "Hunt and Peck",
-    "medieval": "Medieval"
+    "medieval": "Medieval",
+    "predictive": "Autocomplete"
 };
 
 const templateDescriptions = {
@@ -25,7 +29,8 @@ const templateDescriptions = {
     "autocorrect": "Computers don't make mistakes. It's autocorrect, not autoincorrect.",
     "musical": "Every keystroke is music to my ears.",
     "alphabetical": "Doing what Dvorak couldn't.",
-    "medieval": "Forsooth!"
+    "medieval": "Forsooth!",
+    "predictive": "We finish each other's one if when the can be."
 };
 
 let state = "start";
@@ -40,7 +45,7 @@ let underlinedWordIndex = -1;
 let underlineTimeout;
 
 let keyboardSounds = [];
-const numSounds = 8; // Number of different sounds to cycle through
+const numSounds = 8;
 
 let currentVolume = 0.1;
 const volumeIncrement = 0.05;
@@ -53,6 +58,23 @@ const alphabeticalKeyMap = {
     'z': 't', 'x': 'u', 'c': 'v', 'v': 'w',
     'b': 'x', 'n': 'y', 'm': 'z'
 };
+
+let markov;
+let kafka;
+let wittgenstein;
+let shouldPredict = false;
+
+let predictedWord = "";
+
+let canType = true;
+const medievalDelay = 500; // delay in milliseconds
+
+function preload() {
+    // Load training text for markov model
+    kafka = loadStrings('assets/kafka.txt');
+    wittgenstein = loadStrings('assets/wittgenstein.txt');
+}
+
 
 /**
  * OH LOOK I DIDN'T DESCRIBE SETUP!!
@@ -69,9 +91,20 @@ function setup() {
     for (let i = 1; i < numSounds; i++) {
         keyboardSounds[i] = loadSound(`assets/sounds/key${i}.wav`);
     }
+
+    // Initialize RiTa markov model
+    markov = RiTa.markov(2);
+    markov.addText(kafka.join(' '));
+    markov.addText(wittgenstein.join(' '));
 }
 
+// Update keyPressed function
 function keyPressed() {
+    // Check if typing is allowed in Medieval state
+    if (state === "medieval" && !canType) {
+        return;
+    }
+
     if (state === "musical") {
         // Play a random sound with increasing volume
         let randomSound = floor(random(keyboardSounds.length - 1)) + 1;
@@ -82,23 +115,57 @@ function keyPressed() {
         currentVolume = currentVolume + volumeIncrement;
     }
 
-    if (keyCode === BACKSPACE) {
-        content = content.slice(0, -1);
-    } else if (keyCode === ENTER) {
-        content += '\n';
-    } else if (key === ' ') {
-        content += ' ';
-        if (state === "autocorrect") {
-            underlineLastWord();
-        }
-    } else if (key.length === 1) { // Only add printable characters
-        if (state === "alphabetical" && alphabeticalKeyMap[key.toLowerCase()]) {
-            let mappedKey = alphabeticalKeyMap[key.toLowerCase()];
-            // Preserve original capitalization
-            content += key === key.toUpperCase() ? mappedKey.toUpperCase() : mappedKey;
-        } else {
+    if (state === "predictive") {
+        if (keyCode === BACKSPACE) { 
+            content = content.slice(0, -1);
+        } else if (keyCode === ENTER) {
+            content += '\n';
+        } else if (key === ' ') {
+            content += ' ';
+            generatePrediction();
+            if (predictedWord) {
+                content += predictedWord + ' ';
+                predictedWord = "";
+            }
+        } else if (key.length === 1) {
             content += key;
         }
+    } else {
+        if (keyCode === BACKSPACE) {
+            content = content.slice(0, -1);
+        } else if (keyCode === ENTER) {
+            content += '\n';
+        } else if (key === ' ') {
+            content += ' ';
+            if (state === "autocorrect") {
+                underlineLastWord();
+            }
+        } else if (key.length === 1) { // Only add printable characters
+            if (state === "alphabetical" && alphabeticalKeyMap[key.toLowerCase()]) {
+                let mappedKey = alphabeticalKeyMap[key.toLowerCase()];
+                // Preserve original capitalization
+                content += key === key.toUpperCase() ? mappedKey.toUpperCase() : mappedKey;
+            } else {
+                content += key;
+            }
+        }
+    }
+
+    if (state === "medieval") {
+        canType = false;
+        setTimeout(() => {
+            canType = true;
+        }, medievalDelay);
+    }
+}
+
+function generatePrediction() {
+    const words = RiTa.tokenize(content);
+    const lastWord = words[words.length - 1];
+    if (lastWord) {
+        const completions = markov.completions(lastWord);
+        // Set the predicted word to the first completion
+        predictedWord = completions && completions.length > 0 ? completions[0] : "";
     }
 }
 
@@ -250,7 +317,7 @@ function regularEditor() {
     fill(255);
     noStroke();
     
-    // Draw paper background for medieval template
+    // paper background for medieval template
     if (state === "medieval") {
         image(paperTexture, 10, 140, 580, 620);
     } else {
@@ -343,7 +410,7 @@ function drawSquigglyUnderline(word, x, y) {
 function draw() {
     if (state === "start") {
         startScreen();
-    } else if (state === "blank" || state === "autocorrect" || state === "musical" || state === "alphabetical" || state === "medieval") {
+    } else if (state === "blank" || state === "autocorrect" || state === "musical" || state === "alphabetical" || state === "medieval" || state === "predictive") {
         regularEditor();
     }
     navbar();
