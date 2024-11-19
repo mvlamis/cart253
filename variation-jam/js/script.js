@@ -15,13 +15,15 @@ const templateButtonStartPos = 200;
 const templates = {
     "blank": "Blank Document", 
     "autocorrect": "Autocorrect",
-    "musical": "Musical Typing"
+    "musical": "Musical Typing",
+    "alphabetical": "Hunt and Peck",
 };
 
 const templateDescriptions = {
     "blank": "Basic, boring, and blank. Are you allergic to fun?",
     "autocorrect": "Computers don't make mistakes. It's autocorrect, not autoincorrect.",
-    "musical": "Every keystroke is music to my ears."
+    "musical": "Every keystroke is music to my ears.",
+    "alphabetical": "Doing what Dvorak couldn't."
 };
 
 let state = "start";
@@ -37,6 +39,15 @@ const numSounds = 8; // Number of different sounds to cycle through
 
 let currentVolume = 0.1;
 const volumeIncrement = 0.05;
+
+const alphabeticalKeyMap = {
+    'q': 'a', 'w': 'b', 'e': 'c', 'r': 'd', 't': 'e',
+    'y': 'f', 'u': 'g', 'i': 'h', 'o': 'i', 'p': 'j',
+    'a': 'k', 's': 'l', 'd': 'm', 'f': 'n', 'g': 'o',
+    'h': 'p', 'j': 'q', 'k': 'r', 'l': 's',
+    'z': 't', 'x': 'u', 'c': 'v', 'v': 'w',
+    'b': 'x', 'n': 'y', 'm': 'z'
+};
 
 /**
  * OH LOOK I DIDN'T DESCRIBE SETUP!!
@@ -71,7 +82,13 @@ function keyPressed() {
             underlineLastWord();
         }
     } else if (key.length === 1) { // Only add printable characters
-        content += key;
+        if (state === "alphabetical" && alphabeticalKeyMap[key.toLowerCase()]) {
+            let mappedKey = alphabeticalKeyMap[key.toLowerCase()];
+            // Preserve original capitalization
+            content += key === key.toUpperCase() ? mappedKey.toUpperCase() : mappedKey;
+        } else {
+            content += key;
+        }
     }
 }
 
@@ -275,11 +292,7 @@ function drawSquigglyUnderline(word, x, y) {
 function draw() {
     if (state === "start") {
         startScreen();
-    } else if (state === "blank") {
-        regularEditor();
-    } else if (state === "autocorrect") {
-        regularEditor();
-    } else if (state === "musical") {
+    } else if (state === "blank" || state === "autocorrect" || state === "musical" || state === "alphabetical") {
         regularEditor();
     }
     navbar();
