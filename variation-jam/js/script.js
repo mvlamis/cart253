@@ -10,24 +10,29 @@
 "use strict";
 
 const templateButtonHeight = 100;
-const templateButtonStartPos = 200;
+const templateButtonStartPos = 180;
 
 const templates = {
     "blank": "Blank Document", 
     "autocorrect": "Autocorrect",
     "musical": "Musical Typing",
     "alphabetical": "Hunt and Peck",
+    "medieval": "Medieval"
 };
 
 const templateDescriptions = {
     "blank": "Basic, boring, and blank. Are you allergic to fun?",
     "autocorrect": "Computers don't make mistakes. It's autocorrect, not autoincorrect.",
     "musical": "Every keystroke is music to my ears.",
-    "alphabetical": "Doing what Dvorak couldn't."
+    "alphabetical": "Doing what Dvorak couldn't.",
+    "medieval": "Forsooth!"
 };
 
 let state = "start";
 let font = "sans-serif";
+let killigrewFont;
+let paperTexture;
+let penCursor;
 
 let content = "";
 let words = [];
@@ -54,6 +59,11 @@ const alphabeticalKeyMap = {
 */
 function setup() {
     createCanvas(600, 800);
+    
+    // Load fonts and images
+    killigrewFont = loadFont('assets/Killigrew.ttf');
+    paperTexture = loadImage('assets/images/paper.png');
+    penCursor = loadImage('assets/images/pen.png');
     
     // Load keyboard sounds
     for (let i = 1; i < numSounds; i++) {
@@ -239,32 +249,73 @@ function regularEditor() {
     background(240);
     fill(255);
     noStroke();
-    rect(20, 150, 560, 600);
+    
+    // Draw paper background for medieval template
+    if (state === "medieval") {
+        image(paperTexture, 10, 140, 580, 620);
+    } else {
+        rect(20, 150, 560, 600);
+    }
+    
     ribbonMenu();
 
     // text editor
     push();
-    textFont(font);
+    textFont(state === "medieval" ? killigrewFont : font);
     fill(0);
-    textSize(20);
+    textSize(state === "medieval" ? 32 : 20);
     textAlign(LEFT, TOP);
     let x = 30;
-    let y = 160;
-    let lineHeight = 24;
-    let words = content.split(' ');
-    for (let i = 0; i < words.length; i++) {
-        let word = words[i];
-        if (i === underlinedWordIndex) {
-            drawSquigglyUnderline(word, x, y + lineHeight);
+    let y = state === "medieval" ? 180 : 160;
+    let lineHeight = state === "medieval" ? 40 : 24;
+    
+    // Split content by newlines first, then words
+    let lines = content.split('\n');
+    let cursorX = x;
+    let cursorY = y;
+    
+    for (let lineNum = 0; lineNum < lines.length; lineNum++) {
+        let words = lines[lineNum].split(' ');
+        x = 30; // Reset x at start of each line
+        
+        for (let i = 0; i < words.length; i++) {
+            let word = words[i];
+            let wordWidth = textWidth(word + ' ');
+            
+            // Check if word would go past margin
+            if (x + wordWidth > width - 40) {
+                x = 30;
+                y += lineHeight;
+            }
+            
+            text(word, x, y);
+            x += wordWidth;
+            
+            // Update cursor position
+            if (lineNum === lines.length - 1 && i === words.length - 1) {
+                cursorX = x;
+                cursorY = y;
+            }
         }
-        text(word, x, y);
-        x += textWidth(word + ' '); // get width of word with space
-        // wrap text
-        if (x > width - 40) {
-            x = 30;
-            y += lineHeight;
+        
+        // Move to next line after processing each line
+        y += lineHeight;
+        
+        // If this is the last line, set cursor position
+        if (lineNum === lines.length - 1 && lines[lineNum] === '') {
+            cursorX = 30;
+            cursorY = y;
         }
     }
+
+    // Draw pen cursor in medieval mode
+    if (state === "medieval") {
+        push();
+        imageMode(CENTER);
+        image(penCursor, cursorX + 360, cursorY - 20, 828, 280);
+        pop();
+    }
+    
     pop();
 }
 
@@ -292,7 +343,7 @@ function drawSquigglyUnderline(word, x, y) {
 function draw() {
     if (state === "start") {
         startScreen();
-    } else if (state === "blank" || state === "autocorrect" || state === "musical" || state === "alphabetical") {
+    } else if (state === "blank" || state === "autocorrect" || state === "musical" || state === "alphabetical" || state === "medieval") {
         regularEditor();
     }
     navbar();
