@@ -5,7 +5,6 @@
  * 
  * What if word processors were good?
  * 
- * 
  * Help from:
  * - https://rednoise.org/rita/examples/p5/Kafgenstein/
  */
