@@ -12,7 +12,7 @@
 
 "use strict";
 
-const templateButtonHeight = 80;
+const templateButtonHeight = 70;
 const templateButtonStartPos = 180;
 
 const templates = {
@@ -21,7 +21,8 @@ const templates = {
     "musical": "Musical Typing",
     "alphabetical": "Hunt and Peck",
     "medieval": "Medieval",
-    "predictive": "Autocomplete"
+    "predictive": "Autocomplete",
+    "clippy": "Clippy"
 };
 
 const templateDescriptions = {
@@ -30,7 +31,8 @@ const templateDescriptions = {
     "musical": "Every keystroke is music to my ears.",
     "alphabetical": "Doing what Dvorak couldn't.",
     "medieval": "Forsooth!",
-    "predictive": "We finish each other's one if when the can be."
+    "predictive": "We finish each other's one if when the can be.",
+    "clippy": "Your lonely word processing days are over."
 };
 
 let state = "start";
@@ -38,18 +40,23 @@ let font = "sans-serif";
 let killigrewFont;
 let paperTexture;
 let penCursor;
+let clippyImage;
+
 
 let content = "";
 let words = [];
 let underlinedWordIndex = -1;
 let underlineTimeout;
 
+// for musical typing
 let keyboardSounds = [];
 const numSounds = 8;
 
 let currentVolume = 0.1;
 const volumeIncrement = 0.05;
 
+
+// for alphabetical 
 const alphabeticalKeyMap = {
     'q': 'a', 'w': 'b', 'e': 'c', 'r': 'd', 't': 'e',
     'y': 'f', 'u': 'g', 'i': 'h', 'o': 'i', 'p': 'j',
@@ -59,6 +66,7 @@ const alphabeticalKeyMap = {
     'b': 'x', 'n': 'y', 'm': 'z'
 };
 
+// for predictive
 let markov;
 let kafka;
 let wittgenstein;
@@ -66,8 +74,39 @@ let shouldPredict = false;
 
 let predictedWord = "";
 
+
+// for medieval
 let canType = true;
 const medievalDelay = 500; // delay in milliseconds
+
+// for clippy
+let clippyMood = -1;
+let showClippyDialog = false;
+let showClippyMoodDialog = false;
+let currentChar = '';
+let clippyX = 450;
+let clippyY = 625;
+let clippyDialogs = [
+    "No problem! I’m just a click away if you need me.",
+    "Alright, I’ll just hang out here in case you change your mind.",
+    "Got it! I’ll try not to take it personally.",
+    "Sure thing… I guess I’ll just keep myself occupied.",
+    "Oh, okay. I suppose I’m not needed. Happens a lot, actually.",
+    "You know, I do exist for a reason, right? Just saying.",
+    "Fine, ignore me! I’m used to it.",
+    "I guess I'm just the worst assistant ever.",
+    "Maybe I should just uninstall myself. Would that make you happy?",
+    "I SEE HOW IT IS. YOU DON’T APPRECIATE ME. FINE.",
+]
+
+let okButtonTimer = 0;
+const OK_BUTTON_DELAY = 500;
+
+let glitchStart = 0;
+let isGlitching = false;
+const GLITCH_DURATION = 3000;
+let clippyDead = true;
+let clippyTrashImage;
 
 function preload() {
     // Load training text for markov model
@@ -77,7 +116,7 @@ function preload() {
 
 
 /**
- * OH LOOK I DIDN'T DESCRIBE SETUP!!
+ * Load assets and RiTa markov model
 */
 function setup() {
     createCanvas(600, 800);
@@ -86,6 +125,9 @@ function setup() {
     killigrewFont = loadFont('assets/Killigrew.ttf');
     paperTexture = loadImage('assets/images/paper.png');
     penCursor = loadImage('assets/images/pen.png');
+    clippyImage = loadImage('assets/images/clippy.png');
+    clippyTrashImage = loadImage('assets/images/clippyTrash.png');
+
     
     // Load keyboard sounds
     for (let i = 1; i < numSounds; i++) {
@@ -98,10 +140,14 @@ function setup() {
     markov.addText(wittgenstein.join(' '));
 }
 
-// Update keyPressed function
 function keyPressed() {
-    // Check if typing is allowed in Medieval state
+    // Check if typing is allowed in Medieval 
     if (state === "medieval" && !canType) {
+        return;
+    }
+
+    // check if typing is allowed in Clippy
+    if (state === "clippy" && showClippyMoodDialog) {
         return;
     }
 
@@ -120,7 +166,7 @@ function keyPressed() {
             content = content.slice(0, -1);
         } else if (keyCode === ENTER) {
             content += '\n';
-        } else if (key === ' ') {
+        } else if (key === ' ') { // on space, add predicted word if available
             content += ' ';
             generatePrediction();
             if (predictedWord) {
@@ -129,6 +175,15 @@ function keyPressed() {
             }
         } else if (key.length === 1) {
             content += key;
+        }
+    } else if (state === "clippy") {
+        if (keyCode === BACKSPACE) {
+            content = content.slice(0, -1);
+        } else if (keyCode === ENTER) {
+            content += '\n';
+        } else if (key.length === 1) {
+            currentChar = key;
+            showClippyDialog = true;
         }
     } else {
         if (keyCode === BACKSPACE) {
@@ -382,6 +437,18 @@ function regularEditor() {
         image(penCursor, cursorX + 360, cursorY - 20, 828, 280);
         pop();
     }
+
+    // draw clippy
+    if (state === "clippy" && !clippyDead) {
+        drawClippy();
+    } else if (state === "clippy" && clippyDead) {
+        push();
+        fill(0, 0, 0);
+        textSize(20);
+        textAlign(CENTER, CENTER);
+        text("Clippy is currently unavailable.", 300, 400);   
+        image(clippyTrashImage, 250, 450, 70, 70);
+    }
     
     pop();
 }
@@ -404,13 +471,164 @@ function drawSquigglyUnderline(word, x, y) {
     pop();
 }
 
+function drawClippy() {
+    if (isGlitching) {
+        drawGlitchEffect();
+        if (millis() - glitchStart > GLITCH_DURATION) {
+            state = "start";
+            clippyMood = -1;
+            clippyDead = true;
+            isGlitching = false;
+
+        }
+        return;
+    }
+
+    // Check if we've seen all dialogs
+    if (clippyMood >= clippyDialogs.length) {
+        isGlitching = true;
+        glitchStart = millis();
+        return;
+    }
+
+    if (showClippyDialog) {
+        push();
+        // Draw Clippy
+        image(clippyImage, clippyX, clippyY, 100, 100);
+
+        // Draw speech bubble
+        fill(255);
+        stroke(0);
+        rect(clippyX - 300, clippyY - 50, 280, 80, 10);
+
+        // Draw buttons
+        fill(200);
+        rect(clippyX - 280, clippyY, 60, 20);
+        rect(clippyX - 200, clippyY, 60, 20);
+
+        // Draw text
+        fill(0);
+        noStroke();
+        textSize(12);
+        textAlign(LEFT, TOP);
+        text(`It looks like you're trying to type '${currentChar}'.\nWould you like my help?`,
+            clippyX - 290, clippyY - 40);
+
+        // Button text
+        textAlign(CENTER, CENTER);
+        text("Yes", clippyX - 250, clippyY + 10);
+        text("No", clippyX - 170, clippyY + 10);
+
+        // Draw Clippy's expression based on mood
+        stroke(0);
+        let moodOffset = map(clippyMood, 0, -5, 0, 10);
+        line(clippyX + 30, clippyY + 40 + moodOffset,
+            clippyX + 50, clippyY + 40);
+        pop();
+
+        // Check if user clicked on buttons
+        // Yes button
+        if (mouseIsPressed && mouseX > clippyX - 280 && mouseX < clippyX - 220 && mouseY > clippyY && mouseY < clippyY + 20) {
+            clippyMood++;
+            // Add the character to the content
+            content += currentChar;
+            showClippyDialog = false;
+        }
+        
+        // No button
+        if (mouseIsPressed && mouseX > clippyX - 200 && mouseX < clippyX - 140 && mouseY > clippyY && mouseY < clippyY + 20) {
+            clippyMood++;
+            showClippyMoodDialog = true;
+            showClippyDialog = false;
+            okButtonTimer = millis(); // Start the timer when dialog appears
+        }
+
+    } else if (showClippyMoodDialog) {
+        push();
+        image(clippyImage, clippyX, clippyY, 100, 100);
+
+        fill(255);
+        stroke(0);
+        rect(clippyX - 300, clippyY - 50, 280, 80, 10);
+        
+        // Change button color based on timer
+        fill(millis() - okButtonTimer < OK_BUTTON_DELAY ? 150 : 200);
+        rect(clippyX - 280, clippyY, 240, 20);
+
+        fill(0);
+        noStroke();
+        textSize(12);
+        textAlign(LEFT, TOP);
+
+        // wrap text
+        let x = clippyX - 290;
+        let y = clippyY - 40;
+        let width = 420;
+        let lineHeight = 15;
+        let dialogWords = clippyDialogs[clippyMood].split(' ');
+        for (let i = 0; i < dialogWords.length; i++) {
+            let word = dialogWords[i];
+            text(word, x, y);
+            x += textWidth(word + ' ');
+            // wrap text
+            if (x > width - 40) {
+                x = clippyX - 290;
+                y += lineHeight;
+            }
+        }
+        
+        textAlign(CENTER, CENTER);
+        text("Ok", clippyX - 170, clippyY + 10);
+        
+        // Only allow click after delay
+        if (mouseIsPressed && 
+            mouseX > clippyX - 280 && mouseX < clippyX - 160 && 
+            mouseY > clippyY && mouseY < clippyY + 20 &&
+            millis() - okButtonTimer > OK_BUTTON_DELAY) {
+            showClippyMoodDialog = false;
+        }
+        pop();
+    }
+}
+
+function drawGlitchEffect() {
+    push();
+    // Random visual glitches
+    for (let i = 0; i < 50; i++) {
+        let x = random(width);
+        let y = random(height);
+        let w = random(20, 100);
+        let h = random(5, 20);
+        
+        // Random colored rectangles
+        fill(random(255), random(255), random(255));
+        rect(x, y, w, h);
+    }
+    
+    // Glitch text
+    textSize(random(12, 48));
+    fill(random(255), random(255), random(255));
+    text("WHAT HAVE YOU DONE", random(50, width-50), random(height));
+    
+    // Draw corrupted Clippy
+    push();
+    tint(random(255), random(255), random(255));
+    image(clippyImage, 
+          clippyX + random(-10, 10), 
+          clippyY + random(-10, 10), 
+          100, 100);
+    pop();
+    pop();
+}
+
+
 /**
- * OOPS I DIDN'T DESCRIBE WHAT MY DRAW DOES!
+ * Show the start screen by default, then show the editor in other states
 */
 function draw() {
     if (state === "start") {
         startScreen();
-    } else if (state === "blank" || state === "autocorrect" || state === "musical" || state === "alphabetical" || state === "medieval" || state === "predictive") {
+    } else if (state === "blank" || state === "autocorrect" || state === "musical" || state === "alphabetical" || state === "medieval" || state === "predictive" || state === "clippy") {
         regularEditor();
     }
     navbar();
