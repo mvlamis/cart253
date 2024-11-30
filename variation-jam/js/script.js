@@ -104,7 +104,7 @@ const OK_BUTTON_DELAY = 500;
 let glitchStart = 0;
 let isGlitching = false;
 const GLITCH_DURATION = 3000;
-let clippyDead = true;
+let clippyDead = false;
 let clippyTrashImage;
 
 function preload() {
@@ -528,7 +528,6 @@ function drawClippy() {
         // Check if user clicked on buttons
         // Yes button
         if (mouseIsPressed && mouseX > clippyX - 280 && mouseX < clippyX - 220 && mouseY > clippyY && mouseY < clippyY + 20) {
-            clippyMood++;
             // Add the character to the content
             content += currentChar;
             showClippyDialog = false;
